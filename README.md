@@ -4,7 +4,7 @@ An automated expect script for performing initial intake assessments on Cisco ne
 
 ## Overview
 
-This script connects to Cisco switches and routers via serial console and automatically executes a comprehensive set of diagnostic and informational commands to document the device's current state. It's designed for lab environments and production intake processes where you need to systematically document multiple devices.
+This script connects to select Cisco switches and routers via serial console and automatically executes a comprehensive set of diagnostic and informational commands to document the device's current state. It's designed for lab environments and production intake processes where you need to systematically document multiple devices. This script currently is designed for the initial intake of equipment that has been unboxed and powered up on a bench, not racked and cabled. Therefore, many initial commands for equipment on a network are not included.
 
 ## Features
 
@@ -16,6 +16,13 @@ This script connects to Cisco switches and routers via serial console and automa
 - **Progress feedback** - Real-time status updates during execution
 
 ## Requirements
+
+### Devices 
+- Linux maintenance laptop
+- Target Switch or Router (may work on many other devices but only tested on these):
+- - Cisco Catalyst 3560G
+- - Cisco Catalyst 3750-X
+- - Cisco ISR 2900 series
 
 ### Software Dependencies
 - `expect` - For script automation
