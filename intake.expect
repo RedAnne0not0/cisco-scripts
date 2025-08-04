@@ -1,34 +1,46 @@
 #!/usr/bin/expect -f
 
 # Cisco Device Intake Script
-# Usage: ./intake.expect <device-name> [serial-port]
-# Example: ./intake.expect switch1 /dev/ttyUSB0
+# Usage: ./intake.expect <device-name> <device-type> [serial-port]
+# Example: ./intake.expect switch1 switch /dev/ttyUSB0
+# Device types: switch, router
 
 # Check arguments
-if {$argc < 1} {
-    puts "Usage: $argv0 <device-name> \[serial-port\]"
-    puts "Example: $argv0 switch1 /dev/ttyUSB0"
+if {$argc < 2} {
+    puts "Usage: $argv0 <device-name> <device-type> \[serial-port\]"
+    puts "Example: $argv0 switch1 switch /dev/ttyUSB0"
+    puts "         $argv0 router1 router /dev/ttyUSB1"
+    puts "Device types: switch, router"
     puts "Default serial port: /dev/ttyUSB0"
     exit 1
 }
 
 set device [lindex $argv 0]
+set device_type [lindex $argv 1]
 set serial_port "/dev/ttyUSB0"
 
-if {$argc >= 2} {
-    set serial_port [lindex $argv 1]
+if {$argc >= 3} {
+    set serial_port [lindex $argv 2]
+}
+
+# Validate device type
+if {$device_type != "switch" && $device_type != "router"} {
+    puts "Error: device-type must be 'switch' or 'router'"
+    puts "You provided: $device_type"
+    exit 1
 }
 
 set timeout 30
 set output_file "${device}-intake-[timestamp -format %Y%m%d-%H%M%S].txt"
 
 puts "Starting intake for device: $device"
+puts "Device type: $device_type" 
 puts "Serial port: $serial_port"
 puts "Output file: $output_file"
 puts "----------------------------------------"
 
 log_file $output_file
-spawn minicom -D $serial_[48;42;145;1260;2030tport
+spawn minicom -D $serial_port
 
 # Handle initial boot prompts and connection
 expect {
@@ -97,45 +109,44 @@ expect "#"
 puts "Connected and configured terminal settings"
 puts "Running intake commands..."
 
-# Define intake commands - customize based on device type
-set switch_commands {
-    "show version"
-    "show boot"
-    "show startup-config"
-    "dir flash:"
-    "show inventory"
-    "show sdm prefer"
-    "show env all"
-    "show post"
-    "show processes cpu sorted"
-    "show memory statistics"
-    "show clock detail"
+# Define intake commands based on device type
+if {$device_type == "switch"} {
+    set commands {
+        "show version"
+        "show boot"
+        "show startup-config"
+        "dir flash:"
+        "show inventory"
+        "show sdm prefer"
+        "show env all"
+        "show post"
+        "show processes cpu sorted"
+        "show memory statistics"
+        "show clock detail"
+    }
+    puts "Using switch command set"
+} elseif {$device_type == "router"} {
+    set commands {
+        "show version"
+        "show bootvar"
+        "show startup-config"
+        "dir bootflash:"
+        "show inventory"
+        "show platform"
+        "show license udi"
+        "show license all"
+        "show environment all"
+        "show diag"
+        "show processes cpu sorted"
+        "show memory statistics"
+        "show clock detail"
+        "dir usb0:"
+        "show rom-monitor"
+    }
+    puts "Using router command set"
 }
 
-set router_commands {
-    "show version"
-    "show bootvar"
-    "show startup-config"
-    "dir bootflash:"
-    "show inventory"
-    "show platform"
-    "show license udi"
-    "show license all"
-    "show environment all"
-    "show diag"
-    "show processes cpu sorted"
-    "show memory statistics"
-    "show clock detail"
-    "dir usb0:"
-    "show rom-monitor"
-}
-
-# For this script, we'll run both sets of commands
-# The device will ignore commands it doesn't recognize
-set all_commands [concat $switch_commands $router_commands]
-set unique_commands [lsort -unique $all_commands]
-
-foreach cmd $unique_commands {
+foreach cmd $commands {
     puts "Executing: $cmd"
     send "$cmd\r"
     expect {
