@@ -99,7 +99,7 @@ ls -la /dev/ttyUSB*
 - `show boot` - Boot parameters and IOS image
 - `show startup-config` - Startup configuration
 - `show vlan brief` - Should only return "vlan 1"
-- `show running-config | include hostname` - ensure hostname is default 
+- `show running-config | include hostname` - Ensure hostname is default 
 - `dir flash:` - Flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show sdm prefer` - Switching database manager template
