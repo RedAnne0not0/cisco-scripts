@@ -1,0 +1,172 @@
+#!/usr/bin/expect -f
+
+# Cisco Device Intake Script
+# Usage: ./intake.expect <device-name> [serial-port]
+# Example: ./intake.expect switch1 /dev/ttyUSB0
+
+# Check arguments
+if {$argc < 1} {
+    puts "Usage: $argv0 <device-name> \[serial-port\]"
+    puts "Example: $argv0 switch1 /dev/ttyUSB0"
+    puts "Default serial port: /dev/ttyUSB0"
+    exit 1
+}
+
+set device [lindex $argv 0]
+set serial_port "/dev/ttyUSB0"
+
+if {$argc >= 2} {
+    set serial_port [lindex $argv 1]
+}
+
+set timeout 30
+set output_file "${device}-intake-[timestamp -format %Y%m%d-%H%M%S].txt"
+
+puts "Starting intake for device: $device"
+puts "Serial port: $serial_port"
+puts "Output file: $output_file"
+puts "----------------------------------------"
+
+log_file $output_file
+spawn minicom -D $serial_[48;42;145;1260;2030tport
+
+# Handle initial boot prompts and connection
+expect {
+    "initial configuration dialog" {
+        send "no\r"
+        exp_continue
+    }
+    "terminate autoinstall" {
+        send "yes\r"
+        exp_continue
+    }
+    "Press RETURN to get started" {
+        send "\r"
+        exp_continue
+    }
+    "Username:" {
+        send "\r"
+        exp_continue
+    }
+    "Password:" {
+        send "\r"
+        exp_continue
+    }
+    ">" {
+        # User mode prompt - good to proceed
+    }
+    "#" {
+        # Already in privileged mode - good to proceed
+    }
+    timeout {
+        puts "Timeout waiting for prompt, sending Enter..."
+        send "\r"
+        exp_continue
+    }
+}
+
+# Try to get to privileged mode
+expect {
+    ">" {
+        send "enable\r"
+        expect {
+            "Password:" {
+                send "\r"
+                expect "#"
+            }
+            "#" {
+                # Successfully enabled
+            }
+            timeout {
+                puts "Error: Could not enter privileged mode"
+                exit 1
+            }
+        }
+    }
+    "#" {
+        # Already in privileged mode
+    }
+}
+
+# Set terminal parameters
+send "terminal length 0\r"
+expect "#"
+send "terminal width 512\r"
+expect "#"
+
+puts "Connected and configured terminal settings"
+puts "Running intake commands..."
+
+# Define intake commands - customize based on device type
+set switch_commands {
+    "show version"
+    "show boot"
+    "show startup-config"
+    "dir flash:"
+    "show inventory"
+    "show sdm prefer"
+    "show env all"
+    "show post"
+    "show processes cpu sorted"
+    "show memory statistics"
+    "show clock detail"
+}
+
+set router_commands {
+    "show version"
+    "show bootvar"
+    "show startup-config"
+    "dir bootflash:"
+    "show inventory"
+    "show platform"
+    "show license udi"
+    "show license all"
+    "show environment all"
+    "show diag"
+    "show processes cpu sorted"
+    "show memory statistics"
+    "show clock detail"
+    "dir usb0:"
+    "show rom-monitor"
+}
+
+# For this script, we'll run both sets of commands
+# The device will ignore commands it doesn't recognize
+set all_commands [concat $switch_commands $router_commands]
+set unique_commands [lsort -unique $all_commands]
+
+foreach cmd $unique_commands {
+    puts "Executing: $cmd"
+    send "$cmd\r"
+    expect {
+        "#" {
+            # Command completed successfully
+        }
+        "Invalid input" {
+            puts "Command not supported on this device: $cmd"
+            expect "#"
+        }
+        timeout {
+            puts "Timeout on command: $cmd"
+            send "\r"
+            expect "#"
+        }
+    }
+    # Small delay between commands
+    sleep 1
+}
+
+puts "All commands completed"
+puts "Cleaning up..."
+
+# Exit gracefully
+send "exit\r"
+expect eof
+
+puts "----------------------------------------"
+puts "Intake completed successfully!"
+puts "Output saved to: $output_file"
+
+# Display file size and line count
+catch {exec wc -l $output_file} result
+puts "File statistics: $result"
