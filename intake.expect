@@ -115,6 +115,8 @@ if {$device_type == "switch"} {
         "show version"
         "show boot"
         "show startup-config"
+        "show vlan brief"
+        "show running-config | include hostname"
         "dir flash:"
         "show inventory"
         "show sdm prefer"
@@ -123,6 +125,8 @@ if {$device_type == "switch"} {
         "show processes cpu sorted"
         "show memory statistics"
         "show clock detail"
+        "show license udi"
+        "show license all"
     }
     puts "Using switch command set"
 } elseif {$device_type == "router"} {
@@ -133,6 +137,7 @@ if {$device_type == "switch"} {
         "dir bootflash:"
         "show inventory"
         "show platform"
+        "show ip interface brief"
         "show license udi"
         "show license all"
         "show environment all"

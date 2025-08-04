@@ -98,6 +98,8 @@ ls -la /dev/ttyUSB*
 - `show version` - Hardware and software information
 - `show boot` - Boot parameters and IOS image
 - `show startup-config` - Startup configuration
+- `show vlan brief` - Should only return "vlan 1"
+- `show running-config | include hostname` - ensure hostname is default 
 - `dir flash:` - Flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show sdm prefer` - Switching database manager template
@@ -106,6 +108,8 @@ ls -la /dev/ttyUSB*
 - `show processes cpu sorted` - CPU utilization
 - `show memory statistics` - Memory usage
 - `show clock detail` - System time
+- `show license udi` - Unique Device Identifier
+- `show license all` - Licensing information 
 
 ### Router Command Set
 - `show version` - Hardware and software information
@@ -114,6 +118,7 @@ ls -la /dev/ttyUSB*
 - `dir bootflash:` - Boot flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show platform` - Platform-specific information
+- `show ip interface brief` - Layer 3 interface overview and IP addressing
 - `show license udi` - Unique Device Identifier
 - `show license all` - Licensing information
 - `show environment all` - Environmental monitoring
