@@ -109,6 +109,9 @@ expect "#"
 puts "Connected and configured terminal settings"
 puts "Running intake commands..."
 
+# first clock capture + RTC sanity check
+run_cmd "show clock detail"
+
 # Define intake commands based on device type
 if {$device_type == "switch"} {
     set commands {
@@ -121,12 +124,17 @@ if {$device_type == "switch"} {
         "show inventory"
         "show sdm prefer"
         "show env all"
+        "show interfaces status"
+        "show ip interface brief"
         "show post"
         "show processes cpu sorted"
         "show memory statistics"
         "show clock detail"
         "show license udi"
         "show license all"
+        "show stack-power"
+        "show switch detail"
+        "show switch stack-ring speed"
     }
     puts "Using switch command set"
 } elseif {$device_type == "router"} {
@@ -171,6 +179,9 @@ foreach cmd $commands {
     # Small delay between commands
     sleep 1
 }
+
+# second capture
+run_cmd "show clock detail"
 
 puts "All commands completed"
 puts "Cleaning up..."
