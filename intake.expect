@@ -163,20 +163,13 @@ foreach cmd $commands {
     puts "Executing: $cmd"
     send "$cmd\r"
     expect {
-        "#" {
-            # Command completed successfully
+        -re {\r\n% (Invalid|Ambiguous|Incomplete).*} {
+            puts $log "ERROR: $cmd -> $expect_out(0,string)"
+            exp_continue
         }
-        "Invalid input" {
-            puts "Command not supported on this device: $cmd"
-            expect "#"
-        }
-        timeout {
-            puts "Timeout on command: $cmd"
-            send "\r"
-            expect "#"
-        }
+        -re {#\s*$} { }
     }
-    # Small delay between commands
+        # Small delay between commands
     sleep 1
 }
 
