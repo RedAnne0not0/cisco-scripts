@@ -25,7 +25,13 @@ proc enter_enable {} {
                         stty echo
                         send -- "$expect_out(1,string)\r"
                     }
-                    expect -re {#\s*$}
+                    expect {
+                        -re {#\s*$} { }
+                        timeout { 
+                            stty echo  
+                            send_user "Enable password failed\n"
+                        }
+                    }
                 }
                 -re {#\s*$} { }   ;# no password set
             }
@@ -75,7 +81,7 @@ if {$device_type != "switch" && $device_type != "router"} {
 }
 
 set timeout 30
-set output_file "${device}-intake-[timestamp -format %Y%m%d-%H%M%S].txt"
+set output_file "${device}-intake-[clock format [clock seconds] -format %Y%m%d-%H%M%S].txt"
 
 puts "Starting intake for device: $device"
 puts "Device type: $device_type" 
@@ -83,8 +89,8 @@ puts "Serial port: $serial_port"
 puts "Output file: $output_file"
 puts "----------------------------------------"
 
+spawn minicom -D $serial_port -b 9600 -8 -o
 log_file $output_file
-spawn minicom -D $serial_port
 
 # Handle initial boot prompts and connection
 expect {
@@ -121,7 +127,10 @@ expect {
     }
 }
 
-# Try to get to privileged mode
+# Wait for initial prompt before trying to escalate
+expect -re {[\]>#]\s*$}
+
+# Get to privileged mode
 enter_enable
 
 # Set terminal parameters
@@ -133,7 +142,7 @@ expect "#"
 puts "Connected and configured terminal settings"
 puts "Running intake commands..."
 
-# first clock capture + RTC sanity check
+# First clock capture + RTC sanity check
 run_cmd "show clock detail"
 
 # Define intake commands based on device type
@@ -151,41 +160,45 @@ if {$device_type == "switch"} {
         "show interfaces status"
         "show ip interface brief"
         "show post"
-        "show processes cpu sorted"
+        "show processes cpu history"
         "show memory statistics"
-        "show clock detail"
         "show license udi"
         "show license all"
-        "show stack-power"
-        "show switch detail"
-        "show switch stack-ring speed"
     }
+    
+    # Add stack commands - these will error gracefully on non-stackable switches
+    lappend commands "show switch detail"
+    lappend commands "show stack-power"
+    lappend commands "show switch stack-ring speed"
+    
     puts "Using switch command set"
 } elseif {$device_type == "router"} {
     set commands {
         "show version"
         "show bootvar"
         "show startup-config"
+        "show running-config | include hostname"
         "dir bootflash:"
         "show inventory"
         "show platform"
-        "show ip interface brief"
         "show license udi"
         "show license all"
         "show environment all"
         "show diag"
-        "show processes cpu sorted"
+        "show processes cpu history"
         "show memory statistics"
-        "show clock detail"
         "dir usb0:"
         "show rom-monitor"
     }
     puts "Using router command set"
 }
 
-foreach cmd $cmds { run_cmd $cmd }
+# Execute all commands
+foreach cmd $commands[48;42;145;1260;2030t { 
+    run_cmd $cmd 
+}
 
-# second capture
+# Final clock capture
 run_cmd "show clock detail"
 
 puts "All commands completed"
