@@ -94,6 +94,11 @@ ls -la /dev/ttyUSB*
 
 ## Commands Executed
 
+### General
+- `terminal length 0` - Disable paging
+- `terminal width 512` - Prevent line wrapping
+- `show clock detail` - RTC/NVRAM check and run-time delta (based on device clock)
+
 ### Switch Command Set
 - `show version` - Hardware and software information
 - `show boot` - Boot parameters and IOS image
@@ -104,12 +109,17 @@ ls -la /dev/ttyUSB*
 - `show inventory` - Hardware inventory and serial numbers
 - `show sdm prefer` - Switching database manager template
 - `show env all` - Environmental monitoring
+- `show interfaces status` - Confirm all ports are recognised by the ASIC, spot dead SFPs or non-Cisco optics (type -> unknown), verify there are no leftover interface descriptions or VLAN assignments.
+- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be “unassigned” on a reset box).
 - `show post` - Power-on self-test results
 - `show processes cpu sorted` - CPU utilization
 - `show memory statistics` - Memory usage
 - `show clock detail` - System time
 - `show license udi` - Unique Device Identifier
 - `show license all` - Licensing information 
+- `show stack-power` - Only works on stackable devices, but quick PSU check, even when no stack cables present
+- `show switch detail` - Switch #, Role, MAC, Priority, State, Serial #, Model, HW/FW revision, Uptime, Stack ring info, Config register, etc.
+- `show switch stack-ring speed` - Only works on stackable devices. Confirms ASIC health and StackWisePlus firmware, even if not stacked.
 
 ### Router Command Set
 - `show version` - Hardware and software information
@@ -118,7 +128,7 @@ ls -la /dev/ttyUSB*
 - `dir bootflash:` - Boot flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show platform` - Platform-specific information
-- `show ip interface brief` - Layer 3 interface overview and IP addressing
+- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be “unassigned” on a reset box).
 - `show license udi` - Unique Device Identifier
 - `show license all` - Licensing information
 - `show environment all` - Environmental monitoring
