@@ -11,18 +11,22 @@ This script connects to select Cisco switches and routers via serial console and
 - **Device-specific command sets** - Separate optimized command lists for switches vs routers
 - **Automated boot prompt handling** - Handles common Cisco boot dialogs and login scenarios
 - **Timestamped output files** - Creates organized log files with device name and timestamp
-- **Error handling** - Gracefully handles unsupported commands and timeouts
+- **Command-level timestamps** - Each command execution is logged with precise timing
+- **Enable password handling** - Supports both environment variables and interactive prompts
+- **Robust error handling** - Gracefully handles unsupported commands and timeouts
 - **Serial port flexibility** - Supports multiple USB-to-serial adapters
 - **Progress feedback** - Real-time status updates during execution
 
 ## Requirements
 
-### Devices 
+### Tested Devices
 - Linux maintenance laptop
-- Target Switch or Router (may work on many other devices but only tested on these):
-- - Cisco Catalyst 3560G
-- - Cisco Catalyst 3750-X
-- - Cisco ISR 2900 series
+- Target Switch or Router:
+  - Cisco Catalyst 3560G (limited stack commands)
+  - Cisco Catalyst 3750-X (full feature set)
+  - Cisco ISR 2921/2951 routers
+
+**Note**: Script may work on other Cisco devices but has only been tested on the above models.
 
 ### Software Dependencies
 - `expect` - For script automation
@@ -37,8 +41,10 @@ sudo apt install expect minicom
 
 Install on RHEL/CentOS/Fedora:
 ```bash
+# For older versions (RHEL/CentOS 7, Fedora <22)
 sudo yum install expect minicom
-# or
+
+# For modern Fedora (22+)
 sudo dnf install expect minicom
 ```
 
@@ -46,11 +52,35 @@ sudo dnf install expect minicom
 - USB-to-Serial adapter (USB-to-RJ45 console cable)
 - Serial console access to target devices
 
+## Prerequisites
+
+### Serial Port Setup
+Ensure your USB-to-serial adapter is recognized:
+```bash
+# Check if device is detected
+dmesg | grep ttyUSB
+lsusb | grep -i serial
+
+# Verify permissions
+ls -la /dev/ttyUSB0
+```
+
+### User Permissions
+Add yourself to the dialout group for serial access:
+```bash
+sudo usermod -a -G dialout $USER
+# Log out and back in for changes to take effect
+
+# Alternative: Temporary ownership change (less secure)
+sudo chown $USER /dev/ttyUSB0
+```
+
 ## Installation
 
-1. Clone or download the script:
+1. Download the script:
 ```bash
-wge[48;42;145;1260;2030tt https://example.com/intake.expect
+# Download from repository (replace with actual URL)
+wget https://github.com/yourusername/cisco-intake/raw/main/intake.expect
 # or copy the script content to a new file
 ```
 
@@ -92,51 +122,62 @@ ls -la /dev/ttyUSB*
 ./intake.expect rtr-wan-01 router /dev/ttyS0
 ```
 
+### Enable Password Handling
+
+```bash
+# Set environment variable for automatic password entry
+export ENABLEPW="your_enable_password"
+./intake.expect switch1 switch
+
+# Or let the script prompt you (more secure)
+./intake.expect switch1 switch
+# Script will prompt: "Enable password: "
+```
+
 ## Commands Executed
 
-### General
+### General Setup Commands
 - `terminal length 0` - Disable paging
 - `terminal width 512` - Prevent line wrapping
-- `show clock detail` - RTC/NVRAM check and run-time delta (based on device clock)
+- `show clock detail` - RTC/NVRAM check and run-time delta (executed at start and end)
 
 ### Switch Command Set
 - `show version` - Hardware and software information
 - `show boot` - Boot parameters and IOS image
 - `show startup-config` - Startup configuration
 - `show vlan brief` - Should only return "vlan 1"
-- `show running-config | include hostname` - Ensure hostname is default 
+- `show running-config | include hostname` - Ensure hostname is default
 - `dir flash:` - Flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show sdm prefer` - Switching database manager template
 - `show env all` - Environmental monitoring
-- `show interfaces status` - Confirm all ports are recognised by the ASIC, spot dead SFPs or non-Cisco optics (type -> unknown), verify there are no leftover interface descriptions or VLAN assignments.
-- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be “unassigned” on a reset box).
+- `show interfaces status` - Confirm all ports are recognised by the ASIC, spot dead SFPs or non-Cisco optics (type -> unknown), verify there are no leftover interface descriptions or VLAN assignments
+- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be "unassigned" on a reset box)
 - `show post` - Power-on self-test results
-- `show processes cpu sorted` - CPU utilization
+- `show processes cpu history` - CPU utilization trends over time (detects spikes and sustained load patterns)
 - `show memory statistics` - Memory usage
-- `show clock detail` - System time
 - `show license udi` - Unique Device Identifier
-- `show license all` - Licensing information 
-- `show stack-power` - Only works on stackable devices, but quick PSU check, even when no stack cables present
+- `show license all` - Licensing information
 - `show switch detail` - Switch #, Role, MAC, Priority, State, Serial #, Model, HW/FW revision, Uptime, Stack ring info, Config register, etc.
-- `show switch stack-ring speed` - Only works on stackable devices. Confirms ASIC health and StackWisePlus firmware, even if not stacked.
+- `show stack-power` - PSU check for stackable devices (works even without stack cables)
+- `show switch stack-ring speed` - Confirms ASIC health and StackWisePlus firmware on stackable devices (works even if not stacked)
 
 ### Router Command Set
 - `show version` - Hardware and software information
 - `show bootvar` - Boot variables and IOS image
 - `show startup-config` - Startup configuration
+- `show running-config | include hostname` - Ensure hostname is default
 - `dir bootflash:` - Boot flash storage contents
 - `show inventory` - Hardware inventory and serial numbers
 - `show platform` - Platform-specific information
-- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be “unassigned” on a reset box).
+- `show ip interface brief` - List of all layer 3 interfaces, admin/oper/up status, assigned IPs (should be "unassigned" on a reset box)
 - `show license udi` - Unique Device Identifier
 - `show license all` - Licensing information
 - `show environment all` - Environmental monitoring
 - `show diag` - Hardware diagnostics
-- `show processes cpu sorted` - CPU utilization
+- `show processes cpu history` - CPU utilization trends over time (detects spikes and sustained load patterns)
 - `show memory statistics` - Memory usage
-- `show clock detail` - System time
-- `dir usb0:` - USB storage contents (if present)
+- `dir usb0:` - USB storage contents (**optional** - may cause 30-second stall if no USB device present)
 - `show rom-monitor` - ROMMON information
 
 ## Output Files
@@ -147,6 +188,60 @@ Examples:
 - `switch1-intake-20240804-143022.txt`
 - `router-core-intake-20240804-150135.txt`
 
+## Logging and Timestamps
+
+Each command execution is timestamped in the output file:
+
+```
+2025-08-04 14:30:22  >> show version
+Cisco IOS Software, C3750 Software (C3750-IPSERVICESK9-M), Version 15.0(2)SE11
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2017 by Cisco Systems, Inc.
+...
+
+2025-08-04 14:30:25  >> show inventory
+NAME: "1", DESCR: "WS-C3750X-24T-L"
+PID: WS-C3750X-24T-L, VID: V06, SN: FDO1234ABCD
+...
+```
+
+This provides clear command separation and timing information for analysis.
+
+## Error Handling
+
+The script includes robust error handling:
+- **Command errors**: Invalid commands are logged but don't stop execution
+- **Timeout protection**: Commands that hang are automatically skipped
+- **Enable password recovery**: Handles password failures gracefully with echo restoration
+- **Device compatibility**: Commands not supported on specific models are handled gracefully
+
+Error messages appear both on screen and in the log file with timestamps.
+
+## Batch Processing
+
+For multiple devices, create a batch script:
+
+```bash
+#!/bin/bash
+# batch-intake.sh
+
+devices=(
+    "switch1:switch:/dev/ttyUSB0"
+    "switch2:switch:/dev/ttyUSB1"
+    "router1:router:/dev/ttyUSB2"
+)
+
+for device in "${devices[@]}"; do
+    IFS=':' read -r name type port <<< "$device"
+    echo "Processing $name..."
+    ./intake.expect "$name" "$type" "$port"
+    echo "Completed $name"
+    sleep 5  # Brief pause between devices
+done
+
+echo "Batch intake completed!"
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -154,8 +249,8 @@ Examples:
 **Permission denied on serial port:**
 ```bash
 sudo usermod -a -G dialout $USER
-# Log out and back in, or:
-sudo chmod 666 /dev/ttyUSB0
+# Log out and back in, or use temporary ownership:
+sudo chown $USER /dev/ttyUSB0
 ```
 
 **Device not responding:**
@@ -170,9 +265,18 @@ sudo chmod 666 /dev/ttyUSB0
 - Use `minicom -D /dev/ttyUSB0` to verify connectivity
 
 **Commands fail or timeout:**
-- Increase timeout value in script (line 20: `set timeout 30`)
+- Increase timeout value in script (search for `set timeout 30`)
 - Check if device requires authentication
 - Verify device is fully booted
+
+**Enable password issues:**
+- Verify password is correct
+- Try setting ENABLEPW environment variable
+- Check for special characters in password
+
+**USB directory check timeout:**
+- The `dir usb0:` command may cause a 30-second stall on routers with no USB device
+- This is expected behavior and the script will continue after timeout
 
 ### Boot Prompt Handling
 
@@ -196,6 +300,7 @@ If automated handling fails, you can:
 - Ensure devices are powered and fully booted
 - Reset devices to factory defaults if needed (`write erase` + `reload`)
 - Have console access ready before running script
+- Verify no other processes are using the serial port
 
 ### Workflow Recommendations
 ```bash
@@ -225,13 +330,21 @@ for file in *.txt; do
 done
 ```
 
+### Quality Checks
+```bash
+# Check for common issues in intake files
+grep -i "startup-config is not present" *.txt  # Verify reset devices
+grep -i "hostname.*Switch" *.txt               # Check default hostnames
+grep -E "% (Invalid|Ambiguous)" *.txt          # Find command errors
+```
+
 ## Script Customization
 
 ### Adding Commands
 Edit the `commands` arrays in the script:
 ```bash
-# For switches, add to switch command set around line 80
-# For routers, add to router command set around line 95
+# For switches, find the switch command set around line 140
+# For routers, find the router command set around line 165
 ```
 
 ### Adjusting Timeouts
@@ -241,7 +354,7 @@ set timeout 60  # Increase from default 30 seconds
 ```
 
 ### Serial Port Settings
-Default minicom settings should work for most Cisco devices (9600 8N1). If needed, configure minicom:
+Default minicom settings work for most Cisco devices (9600 8N1). If needed, configure minicom:
 ```bash
 sudo minicom -s  # Configure and save settings
 ```
@@ -258,3 +371,4 @@ Feel free to submit improvements, especially for handling additional device type
 
 - v1.0 - Initial release with basic switch/router support
 - v1.1 - Added device type validation and improved error handling
+- v1.2 - Added enable password handling, improved logging, enhanced error recovery, and command-level timestamps
