@@ -5,6 +5,50 @@
 # Example: ./intake.expect switch1 switch /dev/ttyUSB0
 # Device types: switch, router
 
+###############################################################################
+# Helper procedures
+###############################################################################
+
+#––– enter_enable – escalate to privileged EXEC, optional ENABLEPW –––
+proc enter_enable {} {
+    expect {
+        -re {>\s*$} {
+            send -- "enable\r"
+            expect {
+                -re {Password:\s*$} {
+                    if {[info exists ::env(ENABLEPW)]} {
+                        send -- "$::env(ENABLEPW)\r"
+                    } else {
+                        stty -echo
+                        send_user "\nEnable password: "
+                        expect_user -re "(.*)\n"
+                        stty echo
+                        send -- "$expect_out(1,string)\r"
+                    }
+                    expect -re {#\s*$}
+                }
+                -re {#\s*$} { }   ;# no password set
+            }
+        }
+        -re {#\s*$} { }           ;# already privileged
+    }
+}
+
+#––– run_cmd – timestamp, send, capture common CLI errors –––
+proc run_cmd {cmd} {
+    set ts [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]
+    send_user "$ts  >> $cmd\n"
+    send -- "$cmd\r"
+    expect {
+        -re {\r\n% (Invalid|Ambiguous|Incomplete).*} {
+            send_user "ERROR: $expect_out(0,string)\n"
+            exp_continue
+        }
+        -re {#\s*$}   { return }
+        timeout       { send_user "TIMEOUT on $cmd\n" }
+    }
+}
+
 # Check arguments
 if {$argc < 2} {
     puts "Usage: $argv0 <device-name> <device-type> \[serial-port\]"
@@ -78,27 +122,7 @@ expect {
 }
 
 # Try to get to privileged mode
-expect {
-    ">" {
-        send "enable\r"
-        expect {
-            "Password:" {
-                send "\r"
-                expect "#"
-            }
-            "#" {
-                # Successfully enabled
-            }
-            timeout {
-                puts "Error: Could not enter privileged mode"
-                exit 1
-            }
-        }
-    }
-    "#" {
-        # Already in privileged mode
-    }
-}
+enter_enable
 
 # Set terminal parameters
 send "terminal length 0\r"
@@ -159,19 +183,7 @@ if {$device_type == "switch"} {
     puts "Using router command set"
 }
 
-foreach cmd $commands {
-    puts "Executing: $cmd"
-    send "$cmd\r"
-    expect {
-        -re {\r\n% (Invalid|Ambiguous|Incomplete).*} {
-            puts $log "ERROR: $cmd -> $expect_out(0,string)"
-            exp_continue
-        }
-        -re {#\s*$} { }
-    }
-        # Small delay between commands
-    sleep 1
-}
+foreach cmd $cmds { run_cmd $cmd }
 
 # second capture
 run_cmd "show clock detail"
