@@ -80,7 +80,7 @@ sudo chown $USER /dev/ttyUSB0
 1. Download the script:
 ```bash
 # Download from repository (replace with actual URL)
-wget https://github.com/yourusername/cisco-intake/raw/main/intake.expect
+wget https://github.com/RedAnne0not0/cisco-scripts/raw/main/intake.expect
 # or copy the script content to a new file
 ```
 
