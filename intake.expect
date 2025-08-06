@@ -11,11 +11,14 @@
 
 #––– enter_enable – escalate to privileged EXEC, optional ENABLEPW –––
 proc enter_enable {} {
+    send_user "DEBUG: Attempting to enter enable mode\n"
     expect {
         -re {>\s*$} {
+            send_user "DEBUG: Found user mode prompt, sending 'enable'\n"
             send -- "enable\r"
             expect {
                 -re {Password:\s*$} {
+                    send_user "DEBUG: Enable password prompt detected\n"
                     if {[info exists ::env(ENABLEPW)]} {
                         send -- "$::env(ENABLEPW)\r"
                     } else {
@@ -25,18 +28,30 @@ proc enter_enable {} {
                         stty echo
                         send -- "$expect_out(1,string)\r"
                     }
-                    expect {
-                        -re {#\s*$} { }
+                 [48;42;145;1260;2030t   expect {
+                        -re {#\s*$} { 
+                            send_user "DEBUG: Successfully entered privileged mode\n"
+                        }
                         timeout { 
                             stty echo  
-                            send_user "Enable password failed\n"
+                            send_user "DEBUG: Enable password failed\n"
                         }
                     }
                 }
-                -re {#\s*$} { }   ;# no password set
+                -re {#\s*$} { 
+                    send_user "DEBUG: Already in privileged mode (no password required)\n"
+                }
+                timeout {
+                    send_user "DEBUG: Timeout waiting for enable response\n"
+                }
             }
         }
-        -re {#\s*$} { }           ;# already privileged
+        -re {#\s*$} { 
+            send_user "DEBUG: Already in privileged mode\n"
+        }
+        timeout {
+            send_user "DEBUG: Timeout waiting for initial prompt\n"
+        }
     }
 }
 
