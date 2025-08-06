@@ -149,6 +149,10 @@ expect {
 # Wait for initial prompt before trying to escalate
 # expect -re {[\]>#]\s*$} ## bad regex, was intended to wait for `>` to call `enter_enable` but if `>` is obtained before this, it doesn't recognize it 
 
+# Clear any buffered output and get a fresh prompt
+send "\r"
+expect -re {[>#]\s*$}
+
 # Get to privileged mode
 enter_enable
 
