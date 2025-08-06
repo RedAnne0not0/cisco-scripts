@@ -89,7 +89,9 @@ puts "Serial port: $serial_port"
 puts "Output file: $output_file"
 puts "----------------------------------------"
 
-spawn minicom -D $serial_port -b 9600 -8 -o
+#spawn minicom -D $serial_port -b 9600 -8 -o ## Don't use minicom, it's an interactive terminal emulator and adds its own layer of control 
+spawn -open [open $serial_port r+]  # create a direct connection to the serial port
+stty -F $serial_port 9600 cs8 -cstopb -parenb # set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
 log_file $output_file
 
 # Handle initial boot prompts and connection
@@ -128,7 +130,7 @@ expect {
 }
 
 # Wait for initial prompt before trying to escalate
-expect -re {[\]>#]\s*$}
+# expect -re {[\]>#]\s*$} ## bad regex, was intended to wait for `>` to call `enter_enable` but if `>` is obtained before this, it doesn't recognize it 
 
 # Get to privileged mode
 enter_enable
@@ -194,7 +196,7 @@ if {$device_type == "switch"} {
 }
 
 # Execute all commands
-foreach cmd $commands[48;42;145;1260;2030t { 
+foreach cmd $commands { 
     run_cmd $cmd 
 }
 
