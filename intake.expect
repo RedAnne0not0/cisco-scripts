@@ -90,8 +90,10 @@ puts "Output file: $output_file"
 puts "----------------------------------------"
 
 #spawn minicom -D $serial_port -b 9600 -8 -o ## Don't use minicom, it's an interactive terminal emulator and adds its own layer of control 
-spawn -open [open $serial_port r+]  # create a direct connection to the serial port
-stty -F $serial_port 9600 cs8 -cstopb -parenb # set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
+# create a direct connection to the serial port
+spawn -open [open $serial_port r+]
+# set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
+stty -F $serial_port 9600 cs8 -cstopb -parenb 
 log_file $output_file
 
 # Handle initial boot prompts and connection
