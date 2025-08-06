@@ -90,16 +90,16 @@ puts "Output file: $output_file"
 puts "----------------------------------------"
 
 #spawn minicom -D $serial_port -b 9600 -8 -o ## Don't use minicom, it's an interactive terminal emulator and adds its own layer of control 
-spawn -open [open $serial_port r+]  # create a direct connection to the serial port
+#spawn -open [open $serial_port r+]  # create a direct connection to the serial port
 ## The line above worked in hacking the code during testing but after adding to branch does not seem to work
 ## 2 lines immediately below are the attempted fix
-## set serial_fd [open $serial_port r+]
+set serial_fd [open $serial_port r+]
 spawn -open $serial_fd
-sleep 1 # attempting to find a problem
+#sleep 1 # attempting to find a problem
 # stty -F $serial_port 9600 cs8 -cstopb -parenb # set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
-if {[catch {exec stty -F $serial_port 9600 cs8 -cstopb -parenb} result]} {
-    puts "Warning: stty configuration failed: $result"
-}
+#if {[catch {exec stty -F $serial_port 9600 cs8 -cstopb -parenb} result]} {
+#    puts "Warning: stty configuration failed: $result"
+#}
 log_file $output_file
 
 # Handle initial boot prompts and connection
