@@ -1,4 +1,5 @@
 #!/usr/bin/expect -f
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Cisco Device Intake Script
 # Usage: ./intake.expect <device-name> <device-type> [serial-port]
