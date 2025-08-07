@@ -5,6 +5,65 @@
 # Example: ./intake.expect switch1 switch /dev/ttyUSB0
 # Device types: switch, router
 
+###############################################################################
+# Helper procedures
+###############################################################################
+
+#––– enter_enable – escalate to privileged EXEC, optional ENABLEPW –––
+proc enter_enable {} {
+    send_user "DEBUG: Attempting to enter enable mode\n"
+    
+    # Send enable command regardless of current state
+    send -- "enable\r"
+    expect {
+        -re {Password:\s*$} {
+            send_user "DEBUG: Enable password prompt detected\n"
+            if {[info exists ::env(ENABLEPW)]} {
+                send -- "$::env(ENABLEPW)\r"
+            } else {
+                stty -echo
+                send_user "\nEnable password: "
+                expect_user -re "(.*)\n"
+                stty echo
+                send -- "$expect_out(1,string)\r"
+            }
+            expect {
+                -re {#\s*$} { 
+                    send_user "DEBUG: Successfully entered privileged mode\n"
+                }
+                timeout { 
+                    stty echo  
+                    send_user "DEBUG: Enable password failed\n"
+                }
+            }
+        }
+        -re {#\s*$} { 
+            send_user "DEBUG: Successfully entered privileged mode (no password required)\n"
+        }
+        -re {>\s*$} {
+            send_user "DEBUG: Still in user mode - enable command may have failed\n"
+        }
+        timeout {
+            send_user "DEBUG: Timeout waiting for enable response\n"
+        }
+    }
+}
+
+#––– run_cmd – timestamp, send, capture common CLI errors –––
+proc run_cmd {cmd} {
+    set ts [clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]
+    send_user "$ts  >> $cmd\n"
+    send -- "$cmd\r"
+    expect {
+        -re {\r\n% (Invalid|Ambiguous|Incomplete).*} {
+            send_user "ERROR: $expect_out(0,string)\n"
+            exp_continue
+        }
+        -re {#\s*$}   { return }
+        timeout       { send_user "TIMEOUT on $cmd\n" }
+    }
+}
+
 # Check arguments
 if {$argc < 2} {
     puts "Usage: $argv0 <device-name> <device-type> \[serial-port\]"
@@ -31,7 +90,7 @@ if {$device_type != "switch" && $device_type != "router"} {
 }
 
 set timeout 30
-set output_file "${device}-intake-[timestamp -format %Y%m%d-%H%M%S].txt"
+set output_file "${device}-intake-[clock format [clock seconds] -format %Y%m%d-%H%M%S].txt"
 
 puts "Starting intake for device: $device"
 puts "Device type: $device_type" 
@@ -39,8 +98,12 @@ puts "Serial port: $serial_port"
 puts "Output file: $output_file"
 puts "----------------------------------------"
 
+#spawn minicom -D $serial_port -b 9600 -8 -o ## Don't use minicom, it's an interactive terminal emulator and adds its own layer of control 
+# create a direct connection to the serial port
+spawn -open [open $serial_port r+]
+# set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
+stty -F $serial_port 9600 cs8 -cstopb -parenb 
 log_file $output_file
-spawn minicom -D $serial_port
 
 # Handle initial boot prompts and connection
 expect {
@@ -77,28 +140,15 @@ expect {
     }
 }
 
-# Try to get to privileged mode
-expect {
-    ">" {
-        send "enable\r"
-        expect {
-            "Password:" {
-                send "\r"
-                expect "#"
-            }
-            "#" {
-                # Successfully enabled
-            }
-            timeout {
-                puts "Error: Could not enter privileged mode"
-                exit 1
-            }
-        }
-    }
-    "#" {
-        # Already in privileged mode
-    }
-}
+# Wait for initial prompt before trying to escalate
+# expect -re {[\]>#]\s*$} ## bad regex, was intended to wait for `>` to call `enter_enable` but if `>` is obtained before this, it doesn't recognize it 
+
+# Clear any buffered output and get a fresh prompt - this didn't work either
+# send "\r"
+# expect -re {[>#]\s*$}
+
+# Get to privileged mode
+enter_enable
 
 # Set terminal parameters
 send "terminal length 0\r"
@@ -109,7 +159,7 @@ expect "#"
 puts "Connected and configured terminal settings"
 puts "Running intake commands..."
 
-# first clock capture + RTC sanity check
+# First clock capture + RTC sanity check
 run_cmd "show clock detail"
 
 # Define intake commands based on device type
@@ -127,53 +177,45 @@ if {$device_type == "switch"} {
         "show interfaces status"
         "show ip interface brief"
         "show post"
-        "show processes cpu sorted"
+        "show processes cpu history"
         "show memory statistics"
-        "show clock detail"
         "show license udi"
         "show license all"
-        "show stack-power"
-        "show switch detail"
-        "show switch stack-ring speed"
     }
+    
+    # Add stack commands - these will error gracefully on non-stackable switches
+    lappend commands "show switch detail"
+    lappend commands "show stack-power"
+    lappend commands "show switch stack-ring speed"
+    
     puts "Using switch command set"
 } elseif {$device_type == "router"} {
     set commands {
         "show version"
         "show bootvar"
         "show startup-config"
+        "show running-config | include hostname"
         "dir bootflash:"
         "show inventory"
         "show platform"
-        "show ip interface brief"
         "show license udi"
         "show license all"
         "show environment all"
         "show diag"
-        "show processes cpu sorted"
+        "show processes cpu history"
         "show memory statistics"
-        "show clock detail"
         "dir usb0:"
         "show rom-monitor"
     }
     puts "Using router command set"
 }
 
-foreach cmd $commands {
-    puts "Executing: $cmd"
-    send "$cmd\r"
-    expect {
-        -re {\r\n% (Invalid|Ambiguous|Incomplete).*} {
-            puts $log "ERROR: $cmd -> $expect_out(0,string)"
-            exp_continue
-        }
-        -re {#\s*$} { }
-    }
-        # Small delay between commands
-    sleep 1
+# Execute all commands
+foreach cmd $commands { 
+    run_cmd $cmd 
 }
 
-# second capture
+# Final clock capture
 run_cmd "show clock detail"
 
 puts "All commands completed"
