@@ -11,13 +11,13 @@
 
 #––– enter_enable – escalate to privileged EXEC, optional ENABLEPW –––
 proc enter_enable {} {
-    send_user "DEBUG: Attempting to enter enable mode\n"
+#    send_user "DEBUG: Attempting to enter enable mode\n"
     
     # Send enable command regardless of current state
     send -- "enable\r"
     expect {
         -re {Password:\s*$} {
-            send_user "DEBUG: Enable password prompt detected\n"
+#            send_user "DEBUG: Enable password prompt detected\n"
             if {[info exists ::env(ENABLEPW)]} {
                 send -- "$::env(ENABLEPW)\r"
             } else {
@@ -29,22 +29,22 @@ proc enter_enable {} {
             }
             expect {
                 -re {#\s*$} { 
-                    send_user "DEBUG: Successfully entered privileged mode\n"
+#                   send_user "DEBUG: Successfully entered privileged mode\n"
                 }
                 timeout { 
                     stty echo  
-                    send_user "DEBUG: Enable password failed\n"
+#                    send_user "DEBUG: Enable password failed\n"
                 }
             }
         }
         -re {#\s*$} { 
-            send_user "DEBUG: Successfully entered privileged mode (no password required)\n"
+#            send_user "DEBUG: Successfully entered privileged mode (no password required)\n"
         }
         -re {>\s*$} {
-            send_user "DEBUG: Still in user mode - enable command may have failed\n"
+#            send_user "DEBUG: Still in user mode - enable command may have failed\n"
         }
         timeout {
-            send_user "DEBUG: Timeout waiting for enable response\n"
+#            send_user "DEBUG: Timeout waiting for enable response\n"
         }
     }
 }
@@ -98,7 +98,6 @@ puts "Serial port: $serial_port"
 puts "Output file: $output_file"
 puts "----------------------------------------"
 
-#spawn minicom -D $serial_port -b 9600 -8 -o ## Don't use minicom, it's an interactive terminal emulator and adds its own layer of control 
 # create a direct connection to the serial port
 spawn -open [open $serial_port r+]
 # set the serial port parameters (9600 baud, 8 data bits, no stop bits, no parity)
@@ -139,13 +138,6 @@ expect {
         exp_continue
     }
 }
-
-# Wait for initial prompt before trying to escalate
-# expect -re {[\]>#]\s*$} ## bad regex, was intended to wait for `>` to call `enter_enable` but if `>` is obtained before this, it doesn't recognize it 
-
-# Clear any buffered output and get a fresh prompt - this didn't work either
-# send "\r"
-# expect -re {[>#]\s*$}
 
 # Get to privileged mode
 enter_enable
