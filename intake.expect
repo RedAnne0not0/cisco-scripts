@@ -12,45 +12,39 @@
 #––– enter_enable – escalate to privileged EXEC, optional ENABLEPW –––
 proc enter_enable {} {
     send_user "DEBUG: Attempting to enter enable mode\n"
+    
+    # Send enable command regardless of current state
+    send -- "enable\r"
     expect {
-        -re {>\s*$} {
-            send_user "DEBUG: Found user mode prompt, sending 'enable'\n"
-            send -- "enable\r"
+        -re {Password:\s*$} {
+            send_user "DEBUG: Enable password prompt detected\n"
+            if {[info exists ::env(ENABLEPW)]} {
+                send -- "$::env(ENABLEPW)\r"
+            } else {
+                stty -echo
+                send_user "\nEnable password: "
+                expect_user -re "(.*)\n"
+                stty echo
+                send -- "$expect_out(1,string)\r"
+            }
             expect {
-                -re {Password:\s*$} {
-                    send_user "DEBUG: Enable password prompt detected\n"
-                    if {[info exists ::env(ENABLEPW)]} {
-                        send -- "$::env(ENABLEPW)\r"
-                    } else {
-                        stty -echo
-                        send_user "\nEnable password: "
-                        expect_user -re "(.*)\n"
-                        stty echo
-                        send -- "$expect_out(1,string)\r"
-                    }
-                 [48;42;145;1260;2030t   expect {
-                        -re {#\s*$} { 
-                            send_user "DEBUG: Successfully entered privileged mode\n"
-                        }
-                        timeout { 
-                            stty echo  
-                            send_user "DEBUG: Enable password failed\n"
-                        }
-                    }
-                }
                 -re {#\s*$} { 
-                    send_user "DEBUG: Already in privileged mode (no password required)\n"
+                    send_user "DEBUG: Successfully entered privileged mode\n"
                 }
-                timeout {
-                    send_user "DEBUG: Timeout waiting for enable response\n"
+                timeout { 
+                    stty echo  
+                    send_user "DEBUG: Enable password failed\n"
                 }
             }
         }
         -re {#\s*$} { 
-            send_user "DEBUG: Already in privileged mode\n"
+            send_user "DEBUG: Successfully entered privileged mode (no password required)\n"
+        }
+        -re {>\s*$} {
+            send_user "DEBUG: Still in user mode - enable command may have failed\n"
         }
         timeout {
-            send_user "DEBUG: Timeout waiting for initial prompt\n"
+            send_user "DEBUG: Timeout waiting for enable response\n"
         }
     }
 }
@@ -149,9 +143,9 @@ expect {
 # Wait for initial prompt before trying to escalate
 # expect -re {[\]>#]\s*$} ## bad regex, was intended to wait for `>` to call `enter_enable` but if `>` is obtained before this, it doesn't recognize it 
 
-# Clear any buffered output and get a fresh prompt
-send "\r"
-expect -re {[>#]\s*$}
+# Clear any buffered output and get a fresh prompt - this didn't work either
+# send "\r"
+# expect -re {[>#]\s*$}
 
 # Get to privileged mode
 enter_enable
