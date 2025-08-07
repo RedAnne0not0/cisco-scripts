@@ -30,22 +30,22 @@ This script connects to select Cisco switches and routers via serial console and
 
 ### Software Dependencies
 - `expect` - For script automation
-- `minicom` - For serial communication
 - Linux/Unix environment
 
 Install on Ubuntu/Debian:
 ```bash
 sudo apt update
-sudo apt install expect minicom
+sudo apt install expect 
 ```
 
 Install on RHEL/CentOS/Fedora:
 ```bash
 # For older versions (RHEL/CentOS 7, Fedora <22)
-sudo yum install expect minicom
+sudo yum install expect
 
 # For modern Fedora (22+)
-sudo dnf install expect minicom
+sudo dnf upgrade --refresh 
+sudo dnf install expect
 ```
 
 ### Hardware Requirements
@@ -69,9 +69,9 @@ ls -la /dev/ttyUSB0
 Add yourself to the dialout group for serial access:
 ```bash
 sudo usermod -a -G dialout $USER
-# Log out and back in for changes to take effect
+#Log out and back in for changes to take effect
 
-# Alternative: Temporary ownership change (less secure)
+# Alternative: Temporary ownership change (less secure) - Not Tested
 sudo chown $USER /dev/ttyUSB0
 ```
 
@@ -156,8 +156,9 @@ export ENABLEPW="your_enable_password"
 - `show post` - Power-on self-test results
 - `show processes cpu history` - CPU utilization trends over time (detects spikes and sustained load patterns)
 - `show memory statistics` - Memory usage
-- `show license udi` - Unique Device Identifier
-- `show license all` - Licensing information
+- `show license udi` - Unique Device Identifier (3750-X, not on 3560G but fails gracefully)
+- `show license all` - Licensing information (3750-X, not on 3560G but fails gracefully)
+- #For stackable devices (e.g. 3750-X), fails gracefully on non-stackable (e.g. 3560G)
 - `show switch detail` - Switch #, Role, MAC, Priority, State, Serial #, Model, HW/FW revision, Uptime, Stack ring info, Config register, etc.
 - `show stack-power` - PSU check for stackable devices (works even without stack cables)
 - `show switch stack-ring speed` - Confirms ASIC health and StackWisePlus firmware on stackable devices (works even if not stacked)
@@ -217,7 +218,10 @@ The script includes robust error handling:
 
 Error messages appear both on screen and in the log file with timestamps.
 
+(Note: In the event of issues with the script not getting `privilege exec` mode, there is commented out error reporting in the `enter_enable` procedure)
+
 ## Batch Processing
+(not tested)
 
 For multiple devices, create a batch script:
 
@@ -354,14 +358,16 @@ set timeout 60  # Increase from default 30 seconds
 ```
 
 ### Serial Port Settings
-Default minicom settings work for most Cisco devices (9600 8N1). If needed, configure minicom:
+Default stty settings work for most Cisco devices (9600 8N1). If needed, configure stty vic. line 104
 ```bash
-sudo minicom -s  # Configure and save settings
 ```
 
 ## License
 
-This script is provided as-is for educational and professional use. Modify as needed for your environment.
+- **Code**: [GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.en.html)
+- **Notes & Documentation**: [CC BY-SA-NC 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+See [LICENSE](./LICENSE) and [LICENSE_POLICY.md](./LICENSE_POLICY.md) for details.
 
 ## Contributing
 
@@ -369,6 +375,18 @@ Feel free to submit improvements, especially for handling additional device type
 
 ## Version History
 
-- v1.0 - Initial release with basic switch/router support
-- v1.1 - Added device type validation and improved error handling
-- v1.2 - Added enable password handling, improved logging, enhanced error recovery, and command-level timestamps
+- v0.0.1 - Initial code with basic switch/router support - non-functional
+- v0.0.2 - Added device type validation and improved error handling
+- v0.0.3 - Added enable password handling, improved logging, enhanced error recovery, and command-level timestamps
+- v0.0.4 - extensive rewrite to fix various bugs, replace minicom with direct serial connection and an `enter_enable` procedure
+- v0.0.4 - debugging of `enter_enable` procedure, making it functional by adding flexibility and debugging messages.
+- v0.0.5 - cleanup for release
+- v0.1.0 - MVP 1 
+
+## Planned features and fixes 
+- Boot sequence logging - current logging misses boot sequence even though the script is actively attempting to get a command prompt and elevate privileges.
+- Timeout handling - The script handles timeouts well, but needs a global timeout counter to prevent infinite loops in pathological cases where a device never responds properly.
+- Error recovery - The script handles "Invalid input" errors well, but if a device gets stuck in a configuration dialog or similar state, there's no mechanism to break out and retry.
+- Cleanup of this README.md 
+- Additional testing
+
