@@ -19,12 +19,13 @@ This script connects to select Cisco switches and routers via serial console and
 
 ## Requirements
 
-### Tested Devices
-- Linux maintenance laptop
-- Target Switch or Router:
-  - Cisco Catalyst 3560G (limited stack commands)
+### Hardware Requirements
+- USB-to-Serial adapter (USB-to-RJ45 console cable)
+- Maintenance laptop
+- Target Switch or Router (tested on the following):
+  - Cisco Catalyst 3560G
   - Cisco Catalyst 3750-X (full feature set)
-  - Cisco ISR 2921/2951 routers
+  - Cisco ISR 2900 series routers
 
 **Note**: Script may work on other Cisco devices but has only been tested on the above models.
 
@@ -32,25 +33,14 @@ This script connects to select Cisco switches and routers via serial console and
 - `expect` - For script automation
 - Linux/Unix environment
 
-Install on Ubuntu/Debian:
+Install expect 
 ```bash
-sudo apt update
+sudo dnf install expect      # Fedora 22+, RHEL 8/9, CentOS 8 Stream
+# CentOS/RHEL 7 (legacy):
+sudo yum install expect
+#Ubuntu/Debian:
 sudo apt install expect 
 ```
-
-Install on RHEL/CentOS/Fedora:
-```bash
-# For older versions (RHEL/CentOS 7, Fedora <22)
-sudo yum install expect
-
-# For modern Fedora (22+)
-sudo dnf upgrade --refresh 
-sudo dnf install expect
-```
-
-### Hardware Requirements
-- USB-to-Serial adapter (USB-to-RJ45 console cable)
-- Serial console access to target devices
 
 ## Prerequisites
 
@@ -260,13 +250,13 @@ sudo chown $USER /dev/ttyUSB0
 **Device not responding:**
 - Check console cable connection
 - Verify correct serial port (`ls /dev/ttyUSB*`)
-- Try different baud rate in minicom settings
+- Try different baud rate in stty settings
 - Power cycle the target device
 
 **Script hangs at boot:**
 - Some devices require manual intervention at boot
 - Press Ctrl+C to exit and connect manually first
-- Use `minicom -D /dev/ttyUSB0` to verify connectivity
+- Use `minicom -D /dev/ttyUSB0` to verify connectivity (requires minicom installed)
 
 **Commands fail or timeout:**
 - Increase timeout value in script (search for `set timeout 30`)
@@ -293,7 +283,7 @@ The script automatically handles these common prompts:
 ### Manual Override
 
 If automated handling fails, you can:
-1. Connect manually with minicom first
+1. Connect manually with minicom first (requires you have minicom installed)
 2. Handle boot prompts manually
 3. Exit minicom
 4. Run the intake script
@@ -388,5 +378,6 @@ Feel free to submit improvements, especially for handling additional device type
 - Timeout handling - The script handles timeouts well, but needs a global timeout counter to prevent infinite loops in pathological cases where a device never responds properly.
 - Error recovery - The script handles "Invalid input" errors well, but if a device gets stuck in a configuration dialog or similar state, there's no mechanism to break out and retry.
 - Cleanup of this README.md 
-- Additional testing
-
+- Additional testing (batch processing, manual override instructions, documented workflow)
+- Automatically verify connectivity and report physical layer errors (e.g. "no serial connection - check console cable and device power")
+- case insensitivity or error reporting for invalid device type.
