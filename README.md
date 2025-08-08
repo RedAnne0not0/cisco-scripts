@@ -30,7 +30,7 @@ This script connects to select Cisco switches and routers via serial console and
 **Note**: Script may work on other Cisco devices but has only been tested on the above models.
 
 ### Software Dependencies
-- `expect` - For script automation
+- `expect` – automation
 - Linux/Unix environment
 
 Install expect 
@@ -59,11 +59,8 @@ ls -la /dev/ttyUSB0
 Add yourself to the dialout group for serial access:
 ```bash
 sudo usermod -a -G dialout $USER
-#Log out and back in for changes to take effect
-
-# Alternative: Temporary ownership change (less secure) - Not Tested
-sudo chown $USER /dev/ttyUSB0
 ```
+IMPORTANT: Log out and back in for changes to take effect
 
 ## Installation
 
@@ -125,6 +122,8 @@ export ENABLEPW="your_enable_password"
 ```
 
 ## Commands Executed
+
+> **Note (3560G):** `show license udi` and `show license all` as well as stack commands are not supported; the IOS will print `% Invalid input`. This is expected.
 
 ### General Setup Commands
 - `terminal length 0` - Disable paging
@@ -243,9 +242,9 @@ echo "Batch intake completed!"
 **Permission denied on serial port:**
 ```bash
 sudo usermod -a -G dialout $USER
-# Log out and back in, or use temporary ownership:
-sudo chown $USER /dev/ttyUSB0
 ```
+Log out and back in
+
 
 **Device not responding:**
 - Check console cable connection
@@ -256,8 +255,8 @@ sudo chown $USER /dev/ttyUSB0
 **Script hangs at boot:**
 - Some devices require manual intervention at boot
 - Press Ctrl+C to exit and connect manually first
-- Use `minicom -D /dev/ttyUSB0` to verify connectivity (requires minicom installed)
-
+- (e.g. connect direclly or use a tool such as minicom: `minicom -D /dev/ttyUSB0` to verify connectivity
+-
 **Commands fail or timeout:**
 - Increase timeout value in script (search for `set timeout 30`)
 - Check if device requires authentication
@@ -283,7 +282,7 @@ The script automatically handles these common prompts:
 ### Manual Override
 
 If automated handling fails, you can:
-1. Connect manually with minicom first (requires you have minicom installed)
+1. Connect manually with a tool such as minicom first (requires you have minicom installed)
 2. Handle boot prompts manually
 3. Exit minicom
 4. Run the intake script
@@ -369,8 +368,8 @@ Feel free to submit improvements, especially for handling additional device type
 - v0.0.2 - Added device type validation and improved error handling
 - v0.0.3 - Added enable password handling, improved logging, enhanced error recovery, and command-level timestamps
 - v0.0.4 - extensive rewrite to fix various bugs, replace minicom with direct serial connection and an `enter_enable` procedure
-- v0.0.4 - debugging of `enter_enable` procedure, making it functional by adding flexibility and debugging messages.
-- v0.0.5 - cleanup for release
+- v0.0.5 - debugging of `enter_enable` procedure, making it functional by adding flexibility and debugging messages.
+- v0.0.6 - cleanup for release
 - v0.1.0 - MVP 1 
 
 ## Planned features and fixes 
@@ -380,4 +379,4 @@ Feel free to submit improvements, especially for handling additional device type
 - Cleanup of this README.md 
 - Additional testing (batch processing, manual override instructions, documented workflow)
 - Automatically verify connectivity and report physical layer errors (e.g. "no serial connection - check console cable and device power")
-- case insensitivity or error reporting for invalid device type.
+- Case insensitivity or error reporting for invalid device type.
